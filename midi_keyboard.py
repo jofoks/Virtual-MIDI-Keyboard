@@ -30,34 +30,35 @@ KEYBOARD_LAYOUTS = {
 }
 
 
-class ScaleGenerator:
-    def __init__(self, start_note: str, scale: Scales, octave: int):
-        self.start_note = start_note.upper()
-        self.scale = scale
-        self.octave = octave
+def scale_generator(start_note: str, scale: Scales, octave: int):
+    index = NOTES.index(start_note.upper())
 
-    def __iter__(self):
-        index = NOTES.index(self.start_note)
-
-        for step in itertools.cycle(SCALES[self.scale]):
-            yield index + self.octave * 12
-            index += step
+    for step in itertools.cycle(SCALES[scale]):
+        yield index + octave * 12
+        index += step
 
 
 class KeyboardMidiDevice:
-    def __init__(self, available_keys: List[str], start_note: str, scale: Scales,
-                 octave: int = 4, default_velocity: int = 64):
+    def __init__(self,
+                 available_keys: List[str],
+                 start_note: str,
+                 scale: Scales,
+                 octave: int = 4,
+                 default_velocity: int = 64,
+                 output_name=None
+                 ):
         self.default_velocity = default_velocity
-        self.output_name = 'Virtual Keyboard MIDI'
-        self.midi_port = mido.open_output(name=self.output_name, virtual=True)
+        self.output_name = output_name or mido.get_output_names()[0]
+        self.midi_port = mido.open_output(name=self.output_name, virtual=False)
         self.message_queue = queue.Queue()
 
-        for key, midi_note in zip(available_keys, ScaleGenerator(start_note, scale, octave)):
+        for key, midi_note in zip(available_keys, scale_generator(start_note, scale, octave)):
             keyboard.on_press_key(key, lambda e, note=midi_note: self._on_key_event(e, note, 'note_on'))
             keyboard.on_release_key(key, lambda e, note=midi_note: self._on_key_event(e, note, 'note_off'))
 
     def _on_key_event(self, _, note, msg_type):
         midi_msg = mido.Message(msg_type, note=note, velocity=self.default_velocity)
+        self.midi_port.send(midi_msg)
         self.message_queue.put(midi_msg)
 
     def __iter__(self):
@@ -84,15 +85,22 @@ def parse_arguments():
                         help='Verbosity level: 0 (silent), 1 (normal), 2 (verbose)')
     parser.add_argument('--default_velocity', '-d', type=int, default=64,
                         help='Default velocity for MIDI notes (default: 64)')
+    parser.add_argument('--output', type=str, required=False,
+                        help='Name of the MIDI bus to output to, defaults to the first available')
     return parser.parse_args()
 
 
 def main():
     args = parse_arguments()
-
     try:
-        midi_device = KeyboardMidiDevice(KEYBOARD_LAYOUTS[args.layout], args.start_note, args.scale, args.octave,
-                                         args.default_velocity)
+        midi_device = KeyboardMidiDevice(
+            available_keys=KEYBOARD_LAYOUTS[args.layout],
+            start_note=args.start_note,
+            scale=args.scale,
+            octave=args.octave,
+            default_velocity=args.default_velocity,
+            output_name=args.output
+        )
 
         if args.verbosity >= 1:
             print(
