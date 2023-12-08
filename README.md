@@ -1,5 +1,8 @@
-# Virtual MIDI Keyboard
+<p align="center">
+    <img src="logo.png" alt="drawing" width="250" />
+</p>
 
+# Virtual MIDI Keyboard
 This Python script transforms your computer keyboard into a virtual MIDI controller. It allows you to play musical notes using your keyboard keys, outputting MIDI messages to a virtual MIDI port. This script essentially turns your keyboard into a MIDI keyboard, which can then be used by other music software to create music. It's important to note that this script itself does not provide sound or musical abilities; it simply sends MIDI signals. For actual sound generation and more advanced musical capabilities, please check out my other project [here](https://github.com/jofoks).
 
 ## Features
@@ -34,6 +37,8 @@ python midi_keyboard.py [OPTIONS]
 - `--layout, -l`: Keyboard layout (options: middle, full, upper; default: middle).
 - `--verbosity, -v`: Verbosity level (0: silent, 1: normal, 2: verbose; default: 1).
 - `--default_velocity, -d`: Default velocity for MIDI notes (default: 64).
+- `--output`: Name of the MIDI bus to output to, defaults to the first available.
+- `--channel, -c`: Channel to send messages on  (default: 0).
 
 ### Example
 
@@ -47,4 +52,3 @@ This command starts the MIDI keyboard with C Major scale, middle layout, verbosi
 ## TODO:
 - Add support for the more message types (other than just note on and off)
 - Add functionality to easily shift octaves
-- Implement switching and/or passing MIDI channel
