@@ -45,19 +45,21 @@ class KeyboardMidiDevice:
                  scale: Scales,
                  octave: int = 4,
                  default_velocity: int = 64,
-                 output_name=None
+                 output_name: str = None,
+                 channel: int = 0
                  ):
         self.default_velocity = default_velocity
         self.output_name = output_name or mido.get_output_names()[0]
         self.midi_port = mido.open_output(name=self.output_name, virtual=False)
         self.message_queue = queue.Queue()
+        self.channel = channel
 
         for key, midi_note in zip(available_keys, scale_generator(start_note, scale, octave)):
             keyboard.on_press_key(key, lambda e, note=midi_note: self._on_key_event(e, note, 'note_on'))
             keyboard.on_release_key(key, lambda e, note=midi_note: self._on_key_event(e, note, 'note_off'))
 
     def _on_key_event(self, _, note, msg_type):
-        midi_msg = mido.Message(msg_type, note=note, velocity=self.default_velocity)
+        midi_msg = mido.Message(msg_type, note=note, velocity=self.default_velocity, channel=self.channel)
         self.midi_port.send(midi_msg)
         self.message_queue.put(midi_msg)
 
@@ -87,6 +89,8 @@ def parse_arguments():
                         help='Default velocity for MIDI notes (default: 64)')
     parser.add_argument('--output', type=str, required=False,
                         help='Name of the MIDI bus to output to, defaults to the first available')
+    parser.add_argument('--channel', '-c', type=int, default=0, choices=range(16),
+                        help='Channel to send messages on  (default: 0)')
     return parser.parse_args()
 
 
@@ -99,12 +103,13 @@ def main():
             scale=args.scale,
             octave=args.octave,
             default_velocity=args.default_velocity,
-            output_name=args.output
+            output_name=args.output,
+            channel=args.channel
         )
 
         if args.verbosity >= 1:
             print(
-                f"MIDI Controller '{midi_device.output_name}' is running. "
+                f"MIDI Controller '{midi_device.output_name}' is sending messages on channel {args.channel}.\n"
                 f"Press keys on your keyboard to play notes. Press Ctrl+C to stop."
             )
 
